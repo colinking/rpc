@@ -1,0 +1,16 @@
+{
+    status: 200,
+    request: {
+        optionalProperties: {
+            id: { type: "string" },
+            slug: { type: "string" },
+            paramValues: { ref: "runs.paramValues" },
+            resources: { values: { type: "string" } },
+        },
+    },
+    response: {
+        properties: {
+            runID: { type: "string" }
+        },
+    }
+}

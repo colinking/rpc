@@ -1,0 +1,28 @@
+{
+    permission: {
+        properties: {
+            action: { type: "string" },
+            roleID: { enum: [
+                "team_admin",
+                "team_developer",
+                "task_viewer",
+                "task_requester",
+                "task_executer",
+                "task_admin",
+                "run_viewer",
+                "runbook_viewer",
+                "runbook_requester",
+                "runbook_executer",
+                "runbook_admin",
+                "session_viewer",
+                "session_executer",
+                "session_admin",
+                "resource_user",
+                "deploy_creator",
+                "group_admin",
+            ] },
+            subGroupID: { type: "string" },
+            subUserID: { type: "string" },
+        }
+    }
+}

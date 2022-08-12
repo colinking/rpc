@@ -1,0 +1,54 @@
+{
+    status: {
+        enum: [
+            "NotStarted",
+            "Queued",
+            "Active",
+            "Cancelled",
+            "Succeeded",
+            "Failed",
+        ]
+    },
+    constraints: {
+        properties: {
+            labels: {
+                elements: {
+                    properties: {
+                        key: { type: "string" },
+                        value: { type: "string" },
+                    }
+                }
+            }
+        }
+    },
+    paramValues: { values: {} },
+    params: { elements: {
+        properties: {
+            slug: { type: "string" },
+            // TODO: other param fields
+        }
+    } },
+    run: {
+        properties: {
+            activeAt: { type: "timestamp" },
+            cancelledAt: { type: "timestamp" },
+            cancelledBy: { type: "string" },
+            constraints: { ref: "constraints" },
+            createdAt: { type: "timestamp" },
+            createdBy: { type: "string" },
+            failedAt: { type: "timestamp" },
+            id: { type: "string" },
+            isPrivate: { type: "boolean" },
+            paramValues: { ref: "paramValues" },
+            params: { ref: "params" },
+            permissions: { elements: { ref: "auth.permission" } },
+            resources: { values: { type: "string" } },
+            sessionID: { type: "string" },
+            status: { ref: "status" },
+            succeededAt: { type: "timestamp" },
+            taskID: { type: "string" },
+            teamID: { type: "string" },
+            timeout: { type: "int32" },
+        }
+    }
+}
