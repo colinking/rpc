@@ -15,7 +15,7 @@ func TestDiscover(t *testing.T) {
 	require.Equal(API{
 		Definitions: []Definition{
 			{
-				Path: []string{"userID"},
+				Path: []string{"users", "id"},
 				Schema: jtd.Schema{
 					Type: jtd.TypeString,
 				},
@@ -23,7 +23,7 @@ func TestDiscover(t *testing.T) {
 		},
 		Endpoints: []Endpoint{
 			{
-				Path: []string{"get"},
+				Path: []string{"users", "get"},
 				Verb: "GET",
 				Request: jtd.Schema{
 					Properties: map[string]jtd.Schema{

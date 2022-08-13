@@ -22,12 +22,14 @@
         }
     },
     paramValues: { values: {} },
-    params: { elements: {
-        properties: {
-            slug: { type: "string" },
-            // TODO: other param fields
+    params: {
+        elements: {
+            properties: {
+                // TODO: other param fields
+                slug: { type: "string" },
+            }
         }
-    } },
+    },
     run: {
         properties: {
             activeAt: { type: "timestamp" },

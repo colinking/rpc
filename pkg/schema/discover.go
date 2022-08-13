@@ -68,7 +68,7 @@ func Discover(root string) (API, error) {
 		dir, _ := filepath.Split(relpath)
 		components := []string{}
 		if len(dir) > 0 {
-			components = strings.Split(dir, "/")
+			components = strings.Split(filepath.Clean(dir), "/")
 		}
 
 		contents, err := os.ReadFile(path)
@@ -101,7 +101,7 @@ func Discover(root string) (API, error) {
 
 		dir, fileName := filepath.Split(relpath)
 		if len(dir) > 0 {
-			components := strings.Split(dir, "/")
+			components := strings.Split(filepath.Clean(dir), "/")
 			endpoint.Path = append(endpoint.Path, components...)
 		}
 
