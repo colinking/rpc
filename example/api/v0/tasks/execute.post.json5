@@ -1,8 +1,4 @@
 {
-<<<<<<< Updated upstream
-    status: 200,
-=======
->>>>>>> Stashed changes
     request: {
         optionalProperties: {
             id: { type: "string" },
