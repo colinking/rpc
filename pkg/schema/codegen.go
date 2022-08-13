@@ -17,37 +17,41 @@ import (
 func Generate(ctx context.Context, api API, dir string) error {
 	definitions := map[string]jtd.Schema{}
 	for _, def := range api.Definitions {
-		definitions[strings.Join(def.Path, ".")] = def.Schema
+		name := strings.Join(def.Path, ".")
+		definitions[name] = def.Schema
 	}
 
 	result, err := generateSchema(ctx, path.Join(dir, "definitions.go"), "definitions", jtd.Schema{
 		Definitions: definitions,
 		Metadata: map[string]interface{}{
+			// HACK: not sure how to generate the definitions without having to also generate
+			// another schema.
 			"description": "Definitions is a no-op used for generation purposes.",
 		},
-	})
+	}, []string{})
 	if err != nil {
 		return err
 	}
 
-	// Disable definition generation going forward.
-	for k, v := range definitions {
-		if v.Metadata == nil {
-			v.Metadata = map[string]interface{}{}
-		}
-		v.Metadata["goType"] = result.DefinitionNames[k]
-		definitions[k] = v
+	// HACK: `metadata.goType` doesn't seem to work with top-level schemas.
+	// We don't want to generate definition types in each file.
+	// To workaround this, we codegen each as an "any" type which is always one line
+	// and then look for and remove those lines from the generated code.
+	externalDefinitions := []string{}
+	for k := range definitions {
+		definitions[k] = jtd.Schema{}
+		externalDefinitions = append(externalDefinitions, result.DefinitionNames[k])
 	}
 
 	for _, endpoint := range api.Endpoints {
 		name := strings.Join(endpoint.Path, ".")
 		endpoint.Request.Definitions = definitions
-		if _, err := generateSchema(ctx, path.Join(dir, name+".request.go"), name+".request.", endpoint.Request); err != nil {
+		if _, err := generateSchema(ctx, path.Join(dir, name+".request.go"), name+".request.", endpoint.Request, externalDefinitions); err != nil {
 			return err
 		}
 
 		endpoint.Response.Definitions = definitions
-		if _, err := generateSchema(ctx, path.Join(dir, name+".response.go"), name+".response.", endpoint.Response); err != nil {
+		if _, err := generateSchema(ctx, path.Join(dir, name+".response.go"), name+".response.", endpoint.Response, externalDefinitions); err != nil {
 			return err
 		}
 	}
@@ -59,7 +63,7 @@ type generationResult struct {
 	DefinitionNames map[string]string `json:"definition_names"`
 }
 
-func generateSchema(ctx context.Context, file string, name string, schema jtd.Schema) (generationResult, error) {
+func generateSchema(ctx context.Context, file string, name string, schema jtd.Schema, externalDefinitions []string) (generationResult, error) {
 	content, err := json.MarshalIndent(toSerializableSchema(schema), "", "\t")
 	if err != nil {
 		return generationResult{}, fmt.Errorf("marshaling schema: %w", err)
@@ -76,7 +80,6 @@ func generateSchema(ctx context.Context, file string, name string, schema jtd.Sc
 		}
 	}()
 
-	// TODO: write to temporary directory to ensure atomic
 	// Requires the JTD CLI: https://github.com/jsontypedef/json-typedef-codegen
 	pkgName := "generated"
 	cmd := exec.CommandContext(ctx, "jtd-codegen", "-", "--go-out", tmpDir, "--go-package", pkgName, "--root-name", name, "--log-format", "json")
@@ -100,6 +103,23 @@ func generateSchema(ctx context.Context, file string, name string, schema jtd.Sc
 	if err != nil {
 		return generationResult{}, fmt.Errorf("reading generated code: %w", err)
 	}
+
+	// HACK: remove external definitions. See HACK comment above.
+	originalLines := strings.Split(string(contents), "\n")
+	lines := []string{}
+	for _, line := range originalLines {
+		include := true
+		for _, def := range externalDefinitions {
+			if strings.HasPrefix(line, "type "+def) {
+				include = false
+				break
+			}
+		}
+		if include {
+			lines = append(lines, line)
+		}
+	}
+	contents = []byte(strings.Join(lines, "\n"))
 
 	// Ensure the generated code is gofmt-ed:
 	formattedContents, err := format.Source(contents)
