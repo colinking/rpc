@@ -1,0 +1,12 @@
+{
+    request: {
+        properties: {
+            id: { type: "string" }
+        }
+    },
+    response: {
+        properties: {
+            name: { type: "string" }
+        }
+    }
+}
