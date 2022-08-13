@@ -12,7 +12,13 @@ import (
 )
 
 type API struct {
-	Endpoints []Endpoint
+	Endpoints   []Endpoint
+	Definitions []Definition
+}
+
+type Definition struct {
+	Path   []string
+	Schema jtd.Schema
 }
 
 type Endpoint struct {
@@ -44,13 +50,43 @@ func Discover(root string) (API, error) {
 		if name == "definitions.json5" {
 			definitions = append(definitions, path)
 		} else if strings.HasSuffix(name, ".json5") {
-			endpoints = append(definitions, path)
+			endpoints = append(endpoints, path)
 		}
 
 		return nil
 	})
 	if err != nil {
 		return API{}, fmt.Errorf("looking for definitions: %w", err)
+	}
+
+	for _, path := range definitions {
+		relpath, err := filepath.Rel(root, path)
+		if err != nil {
+			return API{}, fmt.Errorf("invalid path: %w", err)
+		}
+
+		dir, _ := filepath.Split(relpath)
+		components := []string{}
+		if len(dir) > 0 {
+			components = strings.Split(dir, "/")
+		}
+
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return API{}, fmt.Errorf("reading definition file (%q): %w", path, err)
+		}
+
+		var file map[string]jtd.Schema
+		if err := json5.Unmarshal(contents, &file); err != nil {
+			return API{}, fmt.Errorf("unmarshaling definition file (%q): %w", path, err)
+		}
+
+		for name, schema := range file {
+			api.Definitions = append(api.Definitions, Definition{
+				Path:   append(components, name),
+				Schema: schema,
+			})
+		}
 	}
 
 	for _, path := range endpoints {

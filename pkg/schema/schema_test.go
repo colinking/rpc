@@ -13,6 +13,14 @@ func TestDiscover(t *testing.T) {
 	api, err := Discover("./fixtures/simple")
 	require.NoError(err)
 	require.Equal(API{
+		Definitions: []Definition{
+			{
+				Path: []string{"userID"},
+				Schema: jtd.Schema{
+					Type: jtd.TypeString,
+				},
+			},
+		},
 		Endpoints: []Endpoint{
 			{
 				Path: []string{"get"},
