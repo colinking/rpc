@@ -3,6 +3,7 @@ package schema
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"go/format"
@@ -10,9 +11,12 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"text/template"
 
 	jtd "github.com/jsontypedef/json-typedef-go"
 )
+
+const packageName = "generated"
 
 func Generate(ctx context.Context, api API, dir string) error {
 	definitions := map[string]jtd.Schema{}
@@ -43,23 +47,39 @@ func Generate(ctx context.Context, api API, dir string) error {
 		externalDefinitions = append(externalDefinitions, result.DefinitionNames[k])
 	}
 
+	routes := []route{}
 	for _, endpoint := range api.Endpoints {
 		name := strings.Join(endpoint.Path, ".")
 		endpoint.Request.Definitions = definitions
-		if _, err := generateSchema(ctx, path.Join(dir, name+".request.go"), name+".request.", endpoint.Request, externalDefinitions); err != nil {
+		request, err := generateSchema(ctx, path.Join(dir, name+".request.go"), name+".request.", endpoint.Request, externalDefinitions)
+		if err != nil {
 			return err
 		}
 
 		endpoint.Response.Definitions = definitions
-		if _, err := generateSchema(ctx, path.Join(dir, name+".response.go"), name+".response.", endpoint.Response, externalDefinitions); err != nil {
+		response, err := generateSchema(ctx, path.Join(dir, name+".response.go"), name+".response.", endpoint.Response, externalDefinitions)
+		if err != nil {
 			return err
 		}
+
+		routes = append(routes, route{
+			Path:         "/" + strings.Join(endpoint.Path, "/"),
+			Verb:         endpoint.Verb,
+			HandlerName:  strings.TrimSuffix(request.RootName, "Request"),
+			RequestType:  request.RootName,
+			ResponseType: response.RootName,
+		})
+	}
+
+	if err := generateRoutes(ctx, path.Join(dir, "routes.go"), routes); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 type generationResult struct {
+	RootName        string            `json:"root_name"`
 	DefinitionNames map[string]string `json:"definition_names"`
 }
 
@@ -81,8 +101,7 @@ func generateSchema(ctx context.Context, file string, name string, schema jtd.Sc
 	}()
 
 	// Requires the JTD CLI: https://github.com/jsontypedef/json-typedef-codegen
-	pkgName := "generated"
-	cmd := exec.CommandContext(ctx, "jtd-codegen", "-", "--go-out", tmpDir, "--go-package", pkgName, "--root-name", name, "--log-format", "json")
+	cmd := exec.CommandContext(ctx, "jtd-codegen", "-", "--go-out", tmpDir, "--go-package", packageName, "--root-name", name, "--log-format", "json")
 	cmd.Stdin = bytes.NewBuffer(content)
 	// RUST_BACKTRACE helps debug jtd-codegen issues.
 	cmd.Env = append(cmd.Env, "RUST_BACKTRACE=1")
@@ -99,7 +118,7 @@ func generateSchema(ctx context.Context, file string, name string, schema jtd.Sc
 		return generationResult{}, fmt.Errorf("parsing jtd-codegen output: %w", err)
 	}
 
-	contents, err := os.ReadFile(path.Join(tmpDir, pkgName+".go"))
+	contents, err := os.ReadFile(path.Join(tmpDir, packageName+".go"))
 	if err != nil {
 		return generationResult{}, fmt.Errorf("reading generated code: %w", err)
 	}
@@ -131,4 +150,46 @@ func generateSchema(ctx context.Context, file string, name string, schema jtd.Sc
 	}
 
 	return result.Go, nil
+}
+
+type route struct {
+	Path         string
+	Verb         string
+	HandlerName  string
+	RequestType  string
+	ResponseType string
+}
+
+//go:embed routes.go.tmpl
+var routesTemplate string
+
+func generateRoutes(ctx context.Context, file string, routes []route) error {
+	t, err := template.New("routes").Parse(routesTemplate)
+	if err != nil {
+		return fmt.Errorf("parsing routes template: %w", err)
+	}
+
+	data := struct {
+		PackageName string
+		Routes      []route
+	}{
+		PackageName: packageName,
+		Routes:      routes,
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return fmt.Errorf("evaluating template: %w", err)
+	}
+
+	// Ensure the generated code is gofmt-ed:
+	formattedContents, err := format.Source(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("formatting routes code: %w", err)
+	}
+	if err := os.WriteFile(file, formattedContents, 0755); err != nil {
+		return fmt.Errorf("writing formatted routes code: %w", err)
+	}
+
+	return nil
 }

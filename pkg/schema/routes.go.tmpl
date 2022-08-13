@@ -1,0 +1,77 @@
+package {{.PackageName}}
+
+import (
+  "context"
+	"encoding/json"
+  "net/http"
+)
+
+type Routes interface {
+  {{- range .Routes}}
+	// {{.Verb}} {{.Path}}
+	{{.HandlerName}}(ctx context.Context, request {{.RequestType}}) ({{.ResponseType}}, error)
+  {{- end}}
+}
+
+func Register(mux *http.ServeMux, routes Routes) {
+	{{- range .Routes}}
+  mux.Handle("{{.Path}}", JSONHandler{{.Verb}}(routes.{{.HandlerName}}))
+  {{- end}}
+}
+
+func JSONHandlerGET[Req any, Res any](fn func(ctx context.Context, req Req) (Res, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req Req
+		// TODO: deserialize query params
+		// if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		// 	writeHTTPError(err, w)
+		// 	return
+		// }
+
+		resp, err := fn(r.Context(), req)
+		if err != nil {
+			writeHTTPError(err, w)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			writeHTTPError(err, w)
+			return
+		}
+	}
+}
+
+func JSONHandlerPOST[Req any, Res any](fn func(ctx context.Context, req Req) (Res, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req Req
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeHTTPError(err, w)
+			return
+		}
+
+		resp, err := fn(r.Context(), req)
+		if err != nil {
+			writeHTTPError(err, w)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			writeHTTPError(err, w)
+			return
+		}
+	}
+}
+
+func writeHTTPError(err error, w http.ResponseWriter) {
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	resp := make(map[string]string)
+	resp["message"] = "Some Error Occurred"
+	if body, err := json.Marshal(map[string]interface{}{
+		"error": err.Error(),
+	}); err != nil {
+		w.Write([]byte(err.Error()))
+	} else {
+		w.Write(body)
+	}
+}
