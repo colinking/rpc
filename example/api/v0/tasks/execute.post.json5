@@ -3,7 +3,7 @@
         optionalProperties: {
             id: { type: "string" },
             slug: { type: "string" },
-            paramValues: { ref: "runs.paramValues" },
+            paramValues: { ref: "v0.runs.paramValues" },
             resources: { values: { type: "string" } },
         },
     },

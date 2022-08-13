@@ -1,5 +1,5 @@
 {
-    request: { ref: "runs.run" },
+    request: { ref: "v0.runs.run" },
     response: {
         properties: {
             runID: { type: "string" }
