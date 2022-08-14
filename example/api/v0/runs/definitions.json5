@@ -25,7 +25,6 @@
     params: {
         elements: {
             properties: {
-                // TODO: other param fields
                 slug: { type: "string" },
             }
         }
