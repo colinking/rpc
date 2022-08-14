@@ -76,7 +76,7 @@ func Generate(ctx context.Context, api API, dir string) error {
 		}
 	}
 
-	if err := generateRoutes(ctx, path.Join(dir, "routes.go"), routes); err != nil {
+	if err := generateHandler(ctx, path.Join(dir, "handler.go"), routes); err != nil {
 		return err
 	}
 
@@ -165,11 +165,11 @@ type route struct {
 	ResponseType string
 }
 
-//go:embed routes.go.tmpl
-var routesTemplate string
+//go:embed handler.go.tmpl
+var handlerTemplate string
 
-func generateRoutes(ctx context.Context, file string, routes []route) error {
-	t, err := template.New("routes").Parse(routesTemplate)
+func generateHandler(ctx context.Context, file string, routes []route) error {
+	t, err := template.New("handler").Parse(handlerTemplate)
 	if err != nil {
 		return fmt.Errorf("parsing routes template: %w", err)
 	}
@@ -190,10 +190,10 @@ func generateRoutes(ctx context.Context, file string, routes []route) error {
 	// Ensure the generated code is gofmt-ed:
 	formattedContents, err := format.Source(buf.Bytes())
 	if err != nil {
-		return fmt.Errorf("formatting routes code: %w", err)
+		return fmt.Errorf("formatting handler code: %w", err)
 	}
 	if err := os.WriteFile(file, formattedContents, 0755); err != nil {
-		return fmt.Errorf("writing formatted routes code: %w", err)
+		return fmt.Errorf("writing formatted handler code: %w", err)
 	}
 
 	return nil

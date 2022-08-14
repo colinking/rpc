@@ -12,8 +12,8 @@ import (
 func main() {
 	mux := http.NewServeMux()
 
-	routes := Routes{}
-	generated.Register(mux, routes)
+	handler := &Handler{}
+	generated.Register(mux, handler)
 
 	server := &http.Server{
 		Addr:    "0.0.0.0:4000",
@@ -29,18 +29,18 @@ func main() {
 	}
 }
 
-type Routes struct{}
+type Handler struct{}
 
-var _ generated.Routes = Routes{}
+var _ generated.Handler = &Handler{}
 
 // GET /v0/runs/get
-func (r Routes) V0RunsGet(ctx context.Context, request generated.V0RunsGetRequest) (generated.V0RunsGetResponse, error) {
+func (h *Handler) V0RunsGet(ctx context.Context, req generated.V0RunsGetRequest) (generated.V0RunsGetResponse, error) {
 	return generated.V0RunsGetResponse{
-		RunID: request.ID,
+		RunID: req.ID,
 	}, nil
 }
 
 // POST /v0/tasks/execute
-func (r Routes) V0TasksExecute(ctx context.Context, request generated.V0TasksExecuteRequest) (generated.V0TasksExecuteResponse, error) {
+func (h *Handler) V0TasksExecute(ctx context.Context, req generated.V0TasksExecuteRequest) (generated.V0TasksExecuteResponse, error) {
 	return generated.V0TasksExecuteResponse{}, errors.New("not implemented")
 }

@@ -12,17 +12,17 @@ import (
 	jtd "github.com/jsontypedef/json-typedef-go"
 )
 
-type Routes interface {
+type Handler interface {
   {{- range .Routes}}
 	// {{.Verb}} {{.Path}}
-	{{.HandlerName}}(ctx context.Context, request {{.RequestType}}) ({{.ResponseType}}, error)
+	{{.HandlerName}}(ctx context.Context, req {{.RequestType}}) ({{.ResponseType}}, error)
   {{- end}}
 }
 
-func Register(mux *http.ServeMux, routes Routes) {
+func Register(mux *http.ServeMux, handler Handler) {
 	// TODO: handle routes that differ only by verb
 	{{- range .Routes}}
-  mux.Handle("{{.Path}}", JSONHandler("{{.Verb}}", {{.HandlerName}}RequestSchema, routes.{{.HandlerName}}))
+  mux.Handle("{{.Path}}", JSONHandler("{{.Verb}}", {{.HandlerName}}RequestSchema, handler.{{.HandlerName}}))
   {{- end}}
 }
 
