@@ -41,34 +41,37 @@ func Generate(ctx context.Context, api API, dir string) error {
 	// We don't want to generate definition types in each file.
 	// To workaround this, we codegen each as an "any" type which is always one line
 	// and then look for and remove those lines from the generated code.
+	definitionsEmpty := map[string]jtd.Schema{}
 	externalDefinitions := []string{}
 	for k := range definitions {
-		definitions[k] = jtd.Schema{}
+		definitionsEmpty[k] = jtd.Schema{}
 		externalDefinitions = append(externalDefinitions, result.DefinitionNames[k])
 	}
 
 	routes := []route{}
 	for _, endpoint := range api.Endpoints {
 		name := strings.Join(endpoint.Path, ".")
+		endpoint.Request.Definitions = definitionsEmpty
+		genReq, err := generateSchema(ctx, path.Join(dir, name+".request.go"), name+".request.", endpoint.Request, externalDefinitions)
+		if err != nil {
+			return err
+		}
 		endpoint.Request.Definitions = definitions
-		request, err := generateSchema(ctx, path.Join(dir, name+".request.go"), name+".request.", endpoint.Request, externalDefinitions)
+
+		endpoint.Response.Definitions = definitionsEmpty
+		genResp, err := generateSchema(ctx, path.Join(dir, name+".response.go"), name+".response.", endpoint.Response, externalDefinitions)
 		if err != nil {
 			return err
 		}
-
 		endpoint.Response.Definitions = definitions
-		response, err := generateSchema(ctx, path.Join(dir, name+".response.go"), name+".response.", endpoint.Response, externalDefinitions)
-		if err != nil {
-			return err
-		}
 
-		handlerName := strings.TrimSuffix(request.RootName, "Request")
+		handlerName := strings.TrimSuffix(genReq.RootName, "Request")
 		routes = append(routes, route{
 			Path:         "/" + strings.Join(endpoint.Path, "/"),
 			Verb:         endpoint.Verb,
 			HandlerName:  handlerName,
-			RequestType:  request.RootName,
-			ResponseType: response.RootName,
+			RequestType:  genReq.RootName,
+			ResponseType: genResp.RootName,
 		})
 
 		if err := generateSchemas(ctx, path.Join(dir, name+".schemas.go"), handlerName, endpoint); err != nil {

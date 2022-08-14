@@ -6,11 +6,12 @@
 - Add error types for returning status codes
 - Generate a TS client
 - Introspection API
-- CLI distribution
+- Real CLI w/ distribution
 - Generate a Go client
 - Support default values from the schema
 - Provide validation errors for schema
 - Inline validation for editing JSON5+JTD files
+- Syntactic sugar for refs
 
 ### Schema
 
