@@ -62,13 +62,18 @@ func Generate(ctx context.Context, api API, dir string) error {
 			return err
 		}
 
+		handlerName := strings.TrimSuffix(request.RootName, "Request")
 		routes = append(routes, route{
 			Path:         "/" + strings.Join(endpoint.Path, "/"),
 			Verb:         endpoint.Verb,
-			HandlerName:  strings.TrimSuffix(request.RootName, "Request"),
+			HandlerName:  handlerName,
 			RequestType:  request.RootName,
 			ResponseType: response.RootName,
 		})
+
+		if err := generateSchemas(ctx, path.Join(dir, name+".schemas.go"), handlerName, endpoint); err != nil {
+			return err
+		}
 	}
 
 	if err := generateRoutes(ctx, path.Join(dir, "routes.go"), routes); err != nil {
@@ -189,6 +194,54 @@ func generateRoutes(ctx context.Context, file string, routes []route) error {
 	}
 	if err := os.WriteFile(file, formattedContents, 0755); err != nil {
 		return fmt.Errorf("writing formatted routes code: %w", err)
+	}
+
+	return nil
+}
+
+//go:embed schemas.go.tmpl
+var schemasTemplate string
+
+func generateSchemas(ctx context.Context, file string, name string, endpoint Endpoint) error {
+	t, err := template.New("schemas").Parse(schemasTemplate)
+	if err != nil {
+		return fmt.Errorf("parsing schemas template: %w", err)
+	}
+
+	data := struct {
+		PackageName    string
+		Name           string
+		RequestSchema  string
+		ResponseSchema string
+	}{
+		PackageName: packageName,
+		Name:        name,
+	}
+
+	req, err := json.Marshal(toSerializableSchema(endpoint.Request))
+	if err != nil {
+		return fmt.Errorf("marshaling request schema: %w", err)
+	}
+	data.RequestSchema = string(req)
+
+	resp, err := json.Marshal(toSerializableSchema(endpoint.Response))
+	if err != nil {
+		return fmt.Errorf("marshaling response schema: %w", err)
+	}
+	data.ResponseSchema = string(resp)
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return fmt.Errorf("evaluating template: %w", err)
+	}
+
+	// Ensure the generated code is gofmt-ed:
+	formattedContents, err := format.Source(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("formatting schemas code: %w", err)
+	}
+	if err := os.WriteFile(file, formattedContents, 0755); err != nil {
+		return fmt.Errorf("writing formatted schemas code: %w", err)
 	}
 
 	return nil
