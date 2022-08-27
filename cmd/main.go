@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/airplanedev/trap"
-	"github.com/colinking/rpc/pkg/schema"
+	"github.com/colinking/rpc/pkg/api"
+	"github.com/colinking/rpc/pkg/codegen/golang"
 )
 
 func main() {
@@ -18,28 +19,28 @@ func main() {
 	}
 }
 
-func run(ctx context.Context, apiPath string, clientPath string) error {
-	api, err := schema.Discover(apiPath)
+func run(ctx context.Context, apiPath string, serverPath string) error {
+	api, err := api.Discover(apiPath)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("API:\n")
 	for _, def := range api.Definitions {
-		fmt.Printf("- [def] %s\n", strings.Join(def.Path, "."))
+		fmt.Printf("- [def] %s\n", strings.Join(def.Name, "."))
 	}
 	for _, endpoint := range api.Endpoints {
-		fmt.Printf("- %-4s /%s\n", endpoint.Verb, strings.Join(endpoint.Path, "/"))
+		fmt.Printf("- %-4s /%s\n", endpoint.Verb, strings.Join(endpoint.Name, "/"))
 	}
 
-	if err := os.RemoveAll(clientPath); err != nil {
+	if err := os.RemoveAll(serverPath); err != nil {
 		return fmt.Errorf("clearing generated client path: %w", err)
 	}
-	if err := os.Mkdir(clientPath, 0755); err != nil {
+	if err := os.Mkdir(serverPath, 0755); err != nil {
 		return fmt.Errorf("creating generated client path: %w", err)
 	}
 
-	if err := schema.Generate(ctx, api, clientPath); err != nil {
+	if err := golang.Server(ctx, api, serverPath); err != nil {
 		return err
 	}
 

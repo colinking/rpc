@@ -9,7 +9,7 @@ To run the API:
 go run ./cmd
 
 # Next, run the API:
-go run ./example/main.go
+cd example && go run ./main.go
 
 # Finally, hit the API with a request:
 curl -v localhost:4000/v0/runs/get

@@ -1,4 +1,4 @@
-package schema
+package api
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ func TestDiscover(t *testing.T) {
 	require.Equal(API{
 		Definitions: []Definition{
 			{
-				Path: []string{"users", "id"},
+				Name: []string{"users", "id"},
 				Schema: jtd.Schema{
 					Type: jtd.TypeString,
 				},
@@ -23,7 +23,7 @@ func TestDiscover(t *testing.T) {
 		},
 		Endpoints: []Endpoint{
 			{
-				Path: []string{"users", "get"},
+				Name: []string{"users", "get"},
 				Verb: "GET",
 				Request: jtd.Schema{
 					Properties: map[string]jtd.Schema{
@@ -31,6 +31,7 @@ func TestDiscover(t *testing.T) {
 							Type: jtd.TypeString,
 						},
 					},
+					AdditionalProperties: true,
 				},
 				Response: jtd.Schema{
 					Properties: map[string]jtd.Schema{
@@ -38,6 +39,7 @@ func TestDiscover(t *testing.T) {
 							Type: jtd.TypeString,
 						},
 					},
+					AdditionalProperties: true,
 				},
 			},
 		},
