@@ -1,0 +1,15 @@
+{
+    request: {
+        optionalProperties: {
+            id: { type: "string" },
+            slug: { type: "string" },
+            paramValues: { ref: "v0.runs.paramValues" },
+            resources: { values: { type: "string" } },
+        },
+    },
+    response: {
+        properties: {
+            runID: { type: "string" }
+        },
+    }
+}
